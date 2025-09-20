@@ -1,7 +1,247 @@
-<div>Teachable Machine Image Model</div>
-<button type="button" onclick="init()">Start</button>
-<div id="webcam-container"></div>
-<div id="label-container"></div>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>졸음 감지 데모</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 10px;
+            margin: 0;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 15px;
+            max-width: 100%;
+            width: 100%;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2em;
+            font-weight: 300;
+        }
+
+        .status {
+            font-size: 1.1em;
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+                margin-bottom: 15px;
+            }
+            
+            .status {
+                font-size: 1em;
+                padding: 12px;
+                margin: 10px 0;
+            }
+        }
+
+        .status.alert {
+            background: #ffebee;
+            color: #c62828;
+            border: 3px solid #ffcdd2;
+            animation: pulse 1s infinite;
+        }
+
+        .status.normal {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 3px solid #c8e6c9;
+        }
+
+        .status.loading {
+            background: #fff3e0;
+            color: #f57c00;
+            border: 3px solid #ffcc02;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        #webcam-container {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        #webcam-container canvas {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
+            aspect-ratio: 4/3;
+            border-radius: 15px;
+            border: 3px solid #e0e0e0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        @media (max-width: 768px) {
+            #webcam-container {
+                margin: 15px 0;
+            }
+            
+            #webcam-container canvas {
+                border-radius: 10px;
+                border: 2px solid #e0e0e0;
+            }
+        }
+
+        #label-container {
+            margin: 20px 0;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        #label-container div {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        @media (max-width: 768px) {
+            #label-container {
+                margin: 15px 0;
+                gap: 10px;
+            }
+            
+            #label-container div {
+                padding: 15px;
+                font-size: 1.1em;
+                border-radius: 10px;
+            }
+        }
+
+        .controls {
+            margin: 20px 0;
+        }
+
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 18px 35px;
+            font-size: 1.2em;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 300px;
+            touch-action: manipulation;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                margin: 15px 0;
+            }
+            
+            button {
+                padding: 15px 25px;
+                font-size: 1.1em;
+                margin: 8px;
+                border-radius: 20px;
+            }
+        }
+
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 12px;
+            margin: 20px 0;
+            font-size: 1em;
+        }
+
+        .error {
+            background: #f8d7da;
+            border: 2px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 12px;
+            margin: 15px 0;
+            font-size: 1em;
+        }
+
+        @media (max-width: 768px) {
+            .warning, .error {
+                padding: 12px;
+                font-size: 0.9em;
+                margin: 15px 0;
+                border-radius: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>😴 졸음 감지 시스템</h1>
+        
+        <div id="status" class="status loading">
+            모델을 로딩하는 중...
+        </div>
+
+        <div id="webcam-container"></div>
+        <div id="label-container"></div>
+
+        <div class="controls">
+            <button type="button" onclick="init()">감지 시작</button>
+        </div>
+
+        <div class="warning">
+            <strong>주의사항:</strong> 이 데모는 교육 목적으로 제작되었습니다. 실제 운전 중에는 사용하지 마세요.
+        </div>
+    </div>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 <script type="text/javascript">
@@ -9,36 +249,52 @@
     // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/image
 
     // the link to your model provided by Teachable Machine export panel
-    const URL = "./my_model/";
+    const URL = "https://teachablemachine.withgoogle.com/models/HA2y50cda/";
 
     let model, webcam, labelContainer, maxPredictions;
 
-    // Load the image model and setup the webcam
-    async function init() {
-        const modelURL = URL + "model.json";
-        const metadataURL = URL + "metadata.json";
+        // Load the image model and setup the webcam
+        async function init() {
+            try {
+                updateStatus('loading', '모델을 로딩하는 중...');
+                
+                const modelURL = URL + "model.json";
+                const metadataURL = URL + "metadata.json";
 
-        // load the model and metadata
-        // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
-        // or files from your local hard drive
-        // Note: the pose library adds "tmImage" object to your window (window.tmImage)
-        model = await tmImage.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
+                // load the model and metadata
+                // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
+                // or files from your local hard drive
+                // Note: the pose library adds "tmImage" object to your window (window.tmImage)
+                model = await tmImage.load(modelURL, metadataURL);
+                maxPredictions = model.getTotalClasses();
+                
+                updateStatus('loading', '카메라를 초기화하는 중...');
 
         // Convenience function to setup a webcam
         const flip = true; // whether to flip the webcam
-        webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
-        await webcam.setup(); // request access to the webcam
-        await webcam.play();
-        window.requestAnimationFrame(loop);
+        // 모바일 환경에 맞는 해상도 설정
+        const isMobile = window.innerWidth <= 768;
+        const webcamWidth = isMobile ? 320 : 640;
+        const webcamHeight = isMobile ? 240 : 480;
+        webcam = new tmImage.Webcam(webcamWidth, webcamHeight, flip);
+                await webcam.setup(); // request access to the webcam
+                await webcam.play();
+                window.requestAnimationFrame(loop);
 
-        // append elements to the DOM
-        document.getElementById("webcam-container").appendChild(webcam.canvas);
-        labelContainer = document.getElementById("label-container");
-        for (let i = 0; i < maxPredictions; i++) { // and class labels
-            labelContainer.appendChild(document.createElement("div"));
+                // append elements to the DOM
+                document.getElementById("webcam-container").appendChild(webcam.canvas);
+                labelContainer = document.getElementById("label-container");
+                for (let i = 0; i < maxPredictions; i++) { // and class labels
+                    labelContainer.appendChild(document.createElement("div"));
+                }
+                
+                updateStatus('normal', '준비 완료! 감지가 시작되었습니다.');
+                
+            } catch (error) {
+                console.error('초기화 실패:', error);
+                updateStatus('error', '모델 로딩 또는 카메라 접근에 실패했습니다.');
+            }
         }
-    }
 
     async function loop() {
         webcam.update(); // update the webcam frame
@@ -56,4 +312,38 @@
             labelContainer.childNodes[i].innerHTML = classPrediction;
         }
     }
+
+    function updateStatus(type, message) {
+        const statusEl = document.getElementById('status');
+        statusEl.className = `status ${type}`;
+        statusEl.textContent = message;
+    }
+
+    // 모바일 화면 방향 변경 대응
+    window.addEventListener('orientationchange', function() {
+        setTimeout(function() {
+            // 화면 방향 변경 후 레이아웃 재조정
+            if (webcam && webcam.canvas) {
+                const isMobile = window.innerWidth <= 768;
+                const newWidth = isMobile ? 320 : 640;
+                const newHeight = isMobile ? 240 : 480;
+                
+                // 웹캠 크기 재조정
+                webcam.canvas.width = newWidth;
+                webcam.canvas.height = newHeight;
+            }
+        }, 100);
+    });
+
+    // 화면 크기 변경 대응
+    window.addEventListener('resize', function() {
+        if (webcam && webcam.canvas) {
+            const isMobile = window.innerWidth <= 768;
+            const newWidth = isMobile ? 320 : 640;
+            const newHeight = isMobile ? 240 : 480;
+            
+            webcam.canvas.width = newWidth;
+            webcam.canvas.height = newHeight;
+        }
+    });
 </script>
